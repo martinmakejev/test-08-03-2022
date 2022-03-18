@@ -1,58 +1,20 @@
-# This code is licensed from CircleCI to the user under the MIT license.
-# See here for details: https://circleci.com/developer/orbs/licensing
-version: 2.1
-
-description: |
-  This Orb runs various linters on your nodejs code
-
-executors:
-  hadolint_executor:
-    parameters:
-      tag:
-        type: string
-        default: "v1.6.6-6-g254b4ff"
-    docker:
-      - image: hadolint/hadolint:<<parameters.tag>>
-  npm_executor:
-    parameters:
-      tag:
-        type: string
-        default: "8-stretch"
-    docker:
-      - image: circleci/node:<<parameters.tag>>
-
-jobs:
-  dockerfile_lint:
-    executor: hadolint_executor
-    steps:
-      - run_dockerfile_lint
+version: 2
+jobs: # we now have TWO jobs, so that a workflow can coordinate them!
   eslint:
-    executor: npm_executor
-    working_directory: ~/reaction-app
-    steps:
-      - run_eslint
 
-commands:
-  run_dockerfile_lint:
-    steps:
-      - checkout
-      - run:
-          name: Dockerfile Lint
-          command: |
-            hadolint Dockerfile
-  run_eslint:
-    steps:
-      - checkout
-      - attach_workspace:
-          at: docker-build-workspace
-      - restore_cache:
-          keys:
-            - node-modules-{{ checksum "docker-build-workspace/GLOBAL_CACHE_VERSION" }}-{{ checksum "package.json" }}-{{ checksum "package-lock.json" }}
-            - node-modules-{{ checksum "docker-build-workspace/GLOBAL_CACHE_VERSION" }}-{{ .Branch }}
-            - node-modules-{{ checksum "docker-build-workspace/GLOBAL_CACHE_VERSION" }}-master
-      - run:
-          name: ESLint
-          command: |
-            npm run lint
+    runs-on: ubuntu-latest
 
-
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js 16
+      uses: actions/setup-node@v2
+      with:
+        node-version: 16
+        cache: 'npm'
+    - run: npm ci
+    - run: npm run lint
+workflows:
+  version: 2
+  one_and_two: # this is the name of our workflow
+    jobs: # and here we list the jobs we are going to run.
+      - eslint
