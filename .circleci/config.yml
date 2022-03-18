@@ -1,20 +1,18 @@
-version: 2
-jobs: # we now have TWO jobs, so that a workflow can coordinate them!
-  eslint:
-
-    runs-on: ubuntu-latest
-
+version: 2.1
+orbs: 
+  node: circleci/node@5.0.1
+jobs:
+  install-node-example:
+    docker:
+      - image: 'cimg/base:stable'
     steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js 16
-      uses: actions/setup-node@v2
-      with:
-        node-version: 16
-        cache: 'npm'
-    - run: npm ci
-    - run: npm run lint
+      - checkout
+      - node/install:
+          install-yarn: true
+          node-version: '16.13'
+      - run: node --version
 workflows:
-  version: 2
-  one_and_two: # this is the name of our workflow
-    jobs: # and here we list the jobs we are going to run.
-      - eslint
+  test:
+    jobs:
+      - node/test:
+          test-results-for: jest
