@@ -1,18 +1,10 @@
-version: 2.1
-orbs: 
-  node: circleci/node@5.0.1
-jobs:
-  install-node-example:
-    docker:
-      - image: 'cimg/base:stable'
-    steps:
-      - checkout
-      - node/install:
-          install-yarn: true
-          node-version: '16.13'
-      - run: node --version
+orbs: # declare what orbs we are going to use
+  node: circleci/node@2.0.2 # the node orb provides common node-related configuration
+
+version: 2.1 # using 2.1 provides access to orbs and other features
+
 workflows:
-  test:
+  matrix-tests:
     jobs:
       - node/test:
-          test-results-for: jest
+          version: 13.11.0
