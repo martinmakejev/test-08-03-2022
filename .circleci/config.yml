@@ -1,26 +1,58 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/2.0/configuration-reference
+# This code is licensed from CircleCI to the user under the MIT license.
+# See here for details: https://circleci.com/developer/orbs/licensing
 version: 2.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/2.0/configuration-reference/#jobs
-jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
+description: |
+  This Orb runs various linters on your nodejs code
+
+executors:
+  hadolint_executor:
+    parameters:
+      tag:
+        type: string
+        default: "v1.6.6-6-g254b4ff"
     docker:
-      - image: cimg/base:stable
-    # Add steps to the job
-    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+      - image: hadolint/hadolint:<<parameters.tag>>
+  npm_executor:
+    parameters:
+      tag:
+        type: string
+        default: "8-stretch"
+    docker:
+      - image: circleci/node:<<parameters.tag>>
+
+jobs:
+  dockerfile_lint:
+    executor: hadolint_executor
+    steps:
+      - run_dockerfile_lint
+  eslint:
+    executor: npm_executor
+    working_directory: ~/reaction-app
+    steps:
+      - run_eslint
+
+commands:
+  run_dockerfile_lint:
     steps:
       - checkout
       - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
+          name: Dockerfile Lint
+          command: |
+            hadolint Dockerfile
+  run_eslint:
+    steps:
+      - checkout
+      - attach_workspace:
+          at: docker-build-workspace
+      - restore_cache:
+          keys:
+            - node-modules-{{ checksum "docker-build-workspace/GLOBAL_CACHE_VERSION" }}-{{ checksum "package.json" }}-{{ checksum "package-lock.json" }}
+            - node-modules-{{ checksum "docker-build-workspace/GLOBAL_CACHE_VERSION" }}-{{ .Branch }}
+            - node-modules-{{ checksum "docker-build-workspace/GLOBAL_CACHE_VERSION" }}-master
+      - run:
+          name: ESLint
+          command: |
+            npm run lint
 
-# Invoke jobs via workflows
-# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
-workflows:
-  say-hello-workflow:
-    jobs:
-      - say-hello
+
