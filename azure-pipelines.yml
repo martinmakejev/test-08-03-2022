@@ -1,21 +1,50 @@
-# Node.js with React
-# Build a Node.js project that uses React.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+version: 2.1
 
-trigger:
-- azure-pipelines
+executors:
+  node-ci-executor:
+    docker:
+      - image: circleci/node:gallium-browsers
 
-pool:
-  vmImage: 'Ubuntu-16.04'
+commands:
+  setup-js-job:
+    steps:
+      - checkout
+      - run:
+          name: Run NPM install
+          command: npm ci
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '8.x'
-  displayName: 'Install Node.js'
+workflows:
+  version: 2.1
+  test-workflow:
+    jobs:
+      - lint
+      - visual_test
 
-- script: |
-    npm install
-    npm run lint
-  displayName: 'npm install and build'
+jobs:
+
+  lint:
+    executor: node-ci-executor
+    steps:
+      - setup-js-job
+      - run:
+          name: "Run linter (eslint)"
+          command: npm run lint
+
+  visual_test:
+    executor: node-ci-executor
+    steps:
+      - setup-js-job
+      - run:
+          name: Install correct version of ChromeDriver
+          command: |
+            npm uninstall chromedriver
+            chrome_version_full=$(google-chrome --version)
+            chrome_major_version=$(echo $chrome_version_full | cut -d " " -f 3 | cut -d "." -f 1)
+            echo "download chrome ${chrome_major_version} [${chrome_version_full}]"
+            npm i "chromedriver@^${chrome_major_version}.0.0" --save-dev
+      - run:
+          name: "Run visual testing (Nightwatch)"
+          command: npm run test
+      - store_artifacts:
+          path: ./nightwatch
+          destination: artifact-file
